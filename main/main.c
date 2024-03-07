@@ -3,6 +3,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 
 #define OUTPUT_GPIO GPIO_NUM_2
 #define INPUT_GPIO GPIO_NUM_3
@@ -15,6 +16,13 @@ static void IRAM_ATTR gpio_isr_handler(void *args)
 {
     uint32_t gpio_num = (uint32_t)args;
     xQueueSendFromISR(gpio_event_queue, &gpio_num, NULL);
+}
+
+static void get_time()
+{
+    int64_t time = esp_timer_get_time();
+
+    ESP_LOGI("TIME", "%lli", time);
 }
 
 static void gpio_task(void *args)
@@ -30,6 +38,7 @@ static void gpio_task(void *args)
                 gpio_set_level(OUTPUT_GPIO, light ? 1 : 0);
                 ESP_LOGI("BUTTON", "change");
             }
+            get_time();
         }
     }
 }
