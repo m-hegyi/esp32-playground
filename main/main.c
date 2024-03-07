@@ -2,6 +2,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "esp_log.h"
 
 #define OUTPUT_GPIO GPIO_NUM_2
 #define INPUT_GPIO GPIO_NUM_3
@@ -23,8 +24,12 @@ static void gpio_task(void *args)
     {
         if (xQueueReceive(gpio_event_queue, &pv_buffer, portMAX_DELAY))
         {
-            light = !light;
-            gpio_set_level(OUTPUT_GPIO, light ? 1 : 0);
+            if (gpio_get_level(INPUT_GPIO) == 0)
+            {
+                light = !light;
+                gpio_set_level(OUTPUT_GPIO, light ? 1 : 0);
+                ESP_LOGI("BUTTON", "change");
+            }
         }
     }
 }
