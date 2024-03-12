@@ -5,6 +5,8 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "ha/esp_zigbee_ha_standard.h"
+#include "nvs_flash.h"
+#include "main.h"
 
 #define OUTPUT_GPIO GPIO_NUM_2
 #define INPUT_GPIO GPIO_NUM_3
@@ -48,6 +50,40 @@ static void gpio_task(void *args)
     }
 }
 
+void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
+{
+    uint32_t *p_app_signal = signal_struct->p_app_signal;
+
+    esp_zb_app_signal_type_t signal_type = *p_app_signal;
+
+    switch (signal_type)
+    {
+    default:
+        ESP_LOGI("ZIGBEE", "Signal type: %hd", signal_type);
+    }
+}
+
+void zigbee_task(void *args)
+{
+    esp_zb_cfg_t nwk_config = {
+        .esp_zb_role = ESP_ZB_DEVICE_TYPE_ED, // end device
+        .install_code_policy = false,
+        .nwk_cfg.zed_cfg = {
+            .ed_timeout = ESP_ZB_ED_AGING_TIMEOUT_64MIN,
+            .keep_alive = 3000
+
+        }};
+    esp_zb_init(&nwk_config);
+
+    esp_zb_on_off_light_cfg_t light_cfg = ESP_ZB_DEFAULT_ON_OFF_LIGHT_CONFIG();
+    esp_zb_ep_list_t *esp_zb_light_ep = esp_zb_on_off_light_ep_create(HA_ESP_LIGHT_ENDPOINT, &light_cfg);
+    esp_zb_device_register(esp_zb_light_ep);
+
+    esp_zb_set_primary_network_channel_set(ESP_ZB_PRIMARY_CHANNEL_MASK);
+    ESP_ERROR_CHECK(esp_zb_start(false));
+    esp_zb_main_loop_iteration();
+}
+
 void app_main(void)
 {
 
@@ -74,10 +110,7 @@ void app_main(void)
     gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1);
     gpio_isr_handler_add(INPUT_GPIO, gpio_isr_handler, (void *)INPUT_GPIO);
 
-    gpio_set_level(OUTPUT_GPIO, 1);
+    ESP_ERROR_CHECK(nvs_flash_init());
 
-    while (true)
-    {
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-    }
+    xTaskCreate(zigbee_task, "Zigbee Task", 4096, NULL, 5, NULL);
 }
