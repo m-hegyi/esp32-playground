@@ -10,7 +10,7 @@
 #define INPUT_GPIO GPIO_NUM_3
 
 #if !defined ZB_ED_ROLE
-#error Define ZB_ED_ROLE in idf.py menuconfig to compile light (End Device) source code.
+#error Define ZB_ED_ROLE in idf.py menuconfig to compile (End Device) source code.
 #endif
 
 static QueueHandle_t gpio_event_queue = NULL;
