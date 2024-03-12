@@ -4,9 +4,14 @@
 #include "freertos/queue.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "ha/esp_zigbee_ha_standard.h"
 
 #define OUTPUT_GPIO GPIO_NUM_2
 #define INPUT_GPIO GPIO_NUM_3
+
+#if !defined ZB_ED_ROLE
+#error Define ZB_ED_ROLE in idf.py menuconfig to compile light (End Device) source code.
+#endif
 
 static QueueHandle_t gpio_event_queue = NULL;
 
