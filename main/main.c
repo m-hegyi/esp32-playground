@@ -16,8 +16,8 @@
 #error Define ZB_ED_ROLE in idf.py menuconfig to compile (End Device) source code.
 #endif
 
-char model_id[18] = "ESP32C6-light-demo";
-char manufacture_name[9] = "Espressif";
+char model_id[] = {14, 'E', 'S', 'P', '3', '2', 'C', '6', '.', 'L', 'i', 'g', 'h', 't', '1'};
+char manufacture_name[] = {9, 'E', 's', 'p', 'r', 'e', 's', 's', 'i', 'f'};
 
 static QueueHandle_t gpio_event_queue = NULL;
 
@@ -125,8 +125,12 @@ static esp_err_t zigbee_attribute_handler(const esp_zb_zcl_set_attr_value_messag
     esp_err_t ret = ESP_OK;
 
     ESP_RETURN_ON_FALSE(message, ESP_FAIL, ZB_TAG, "Empty message");
-    ESP_RETURN_ON_FALSE(message->info.status == ESP_ZB_ZCL_STATUS_SUCCESS, ESP_ERR_INVALID_ARG, ZB_TAG, "Received message: error status(%d)",
+    ESP_RETURN_ON_FALSE(message->info.status == ESP_ZB_ZCL_STATUS_SUCCESS,
+                        ESP_ERR_INVALID_ARG,
+                        ZB_TAG,
+                        "Received message: error status(%d)",
                         message->info.status);
+
     ESP_LOGI(ZB_TAG, "Received message: endpoint(%d), cluster(0x%x), attribute(0x%x), data size(%d)", message->info.dst_endpoint, message->info.cluster,
              message->attribute.id, message->attribute.data.size);
 
@@ -139,6 +143,14 @@ static esp_err_t zigbee_attribute_handler(const esp_zb_zcl_set_attr_value_messag
                 light = message->attribute.data.value ? *(bool *)message->attribute.data.value : light;
                 ESP_LOGI(ZB_TAG, "Light sets to %s", light ? "On" : "Off");
                 gpio_set_level(OUTPUT_GPIO, light ? 1 : 0);
+            }
+        }
+
+        if (message->info.cluster == ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY)
+        {
+            if (message->attribute.id == ESP_ZB_ZCL_ATTR_IDENTIFY_IDENTIFY_TIME_ID)
+            {
+                ESP_LOGI(ZB_TAG, "Identify value %d", *(uint16_t *)message->attribute.data.value);
             }
         }
     }
