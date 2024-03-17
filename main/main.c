@@ -163,8 +163,6 @@ static esp_err_t zigbee_attribute_handler(const esp_zb_zcl_set_attr_value_messag
 
 static esp_err_t zigbee_response_handler(const esp_zb_zcl_cmd_default_resp_message_t *message)
 {
-    ESP_LOGI(ZB_TAG, "Test: %d, %d, %d", message->resp_to_cmd, message->status_code, message->info.command.id);
-
     esp_zb_zcl_status_t status = esp_zb_zcl_set_attribute_val(
         message->info.dst_endpoint,
         ESP_ZB_ZCL_CLUSTER_ID_ON_OFF,
