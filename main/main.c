@@ -31,13 +31,6 @@ static void IRAM_ATTR gpio_isr_handler(void *args)
     xQueueSendFromISR(gpio_event_queue, &gpio_num, NULL);
 }
 
-static void get_time()
-{
-    int64_t time = esp_timer_get_time();
-
-    ESP_LOGI("TIME", "%lli", time);
-}
-
 static void gpio_task(void *args)
 {
     uint32_t pv_buffer;
@@ -49,9 +42,19 @@ static void gpio_task(void *args)
             {
                 light = !light;
                 gpio_set_level(OUTPUT_GPIO, light ? 1 : 0);
+
+                esp_zb_zcl_report_attr_cmd_t cmd_req;
+                esp_zb_lock_acquire(portMAX_DELAY);
+                esp_zb_zcl_status_t status = esp_zb_zcl_set_attribute_val(
+                    HA_ESP_LIGHT_ENDPOINT,
+                    ESP_ZB_ZCL_CLUSTER_ID_ON_OFF,
+                    ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+                    ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID,
+                    &light,
+                    false);
+                esp_zb_lock_release();
                 ESP_EARLY_LOGI("BUTTON", "change");
             }
-            // get_time();
         }
     }
 }
@@ -158,6 +161,26 @@ static esp_err_t zigbee_attribute_handler(const esp_zb_zcl_set_attr_value_messag
     return ret;
 }
 
+static esp_err_t zigbee_response_handler(const esp_zb_zcl_cmd_default_resp_message_t *message)
+{
+    ESP_LOGI(ZB_TAG, "Test: %d, %d, %d", message->resp_to_cmd, message->status_code, message->info.command.id);
+
+    esp_zb_zcl_status_t status = esp_zb_zcl_set_attribute_val(
+        message->info.dst_endpoint,
+        ESP_ZB_ZCL_CLUSTER_ID_ON_OFF,
+        ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID,
+        &light,
+        false);
+
+    if (status != ESP_ZB_ZCL_STATUS_SUCCESS)
+    {
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
 static esp_err_t zigbee_action_handler(esp_zb_core_action_callback_id_t callback_id, const void *message)
 {
     esp_err_t ret = ESP_OK;
@@ -165,6 +188,9 @@ static esp_err_t zigbee_action_handler(esp_zb_core_action_callback_id_t callback
     {
     case ESP_ZB_CORE_SET_ATTR_VALUE_CB_ID:
         ret = zigbee_attribute_handler(message);
+        break;
+    case ESP_ZB_CORE_CMD_DEFAULT_RESP_CB_ID:
+        ret = zigbee_response_handler(message);
         break;
     default:
         ESP_LOGW(ZB_TAG, "Receive Zigbee action(0x%x) callback", callback_id);
